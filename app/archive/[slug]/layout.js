@@ -5,6 +5,10 @@ import ProviderSubscribe from "@/components/ProviderSubscribe";
 import { countReaders, getArchiveNewsletter } from "@/lib/archive-data";
 import { getArchiveUrls } from "@/lib/archive-hosts";
 
+// Custom archive hosts are rewritten by the proxy. Render current newsletter
+// settings instead of keeping a cached page under the public host's URL.
+export const dynamic = "force-dynamic";
+
 export default async function ArchiveLayout({ children, params }) {
 	const newsletter = await getArchiveNewsletter((await params).slug);
 	if (!newsletter) notFound();
