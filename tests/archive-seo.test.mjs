@@ -46,7 +46,7 @@ test("share images are the issue's own picture, or a generated card", () => {
 	});
 	assert.equal(
 		getShareImage(newsletter, { ...issue, thumbnailUrl: undefined }, APP).url,
-		"https://mailcheap.test/archive/field-notes/og?p=how-to-price-a-side-project"
+		"https://mailcheap.test/archive/field-notes/og?p=how-to-price-a-side-project&v=2"
 	);
 	assert.deepEqual(getShareImage(newsletter, { ...issue, thumbnailUrl: "/email/x.png" }, APP), {
 		url: "https://mailcheap.test/email/x.png",
@@ -91,7 +91,7 @@ test("the author page is a profile with the photo, bio and social profiles", () 
 	});
 
 	const { metadata: withoutPhoto } = getAuthorSeo({ ...newsletter, imageUrl: undefined }, APP);
-	assert.equal(withoutPhoto.openGraph.images[0].url, "https://mailcheap.test/archive/field-notes/og");
+	assert.equal(withoutPhoto.openGraph.images[0].url, "https://mailcheap.test/archive/field-notes/og?v=2");
 	assert.equal(
 		withoutPhoto.description,
 		"One idea about building things, every Sunday.",
@@ -103,7 +103,7 @@ test("the archive home shares a generated card and canonicalizes to its domain's
 	process.env.ARCHIVE_HOSTS = "news.example.com=field-notes";
 	const { metadata, jsonLd } = getHomeSeo(newsletter, APP);
 	assert.equal(metadata.alternates.canonical, "https://news.example.com/");
-	assert.equal(metadata.openGraph.images[0].url, "https://mailcheap.test/archive/field-notes/og");
+	assert.equal(metadata.openGraph.images[0].url, "https://mailcheap.test/archive/field-notes/og?v=2");
 	assert.equal(jsonLd["@type"], "Blog");
 
 	delete process.env.ARCHIVE_HOSTS;

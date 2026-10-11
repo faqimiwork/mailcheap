@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import ShareCard from "@/components/ShareCard";
 import { countReaders, getArchiveIssue, getArchiveNewsletter } from "@/lib/archive-data";
 import { getArchiveUrls } from "@/lib/archive-hosts";
 import { getIssueDate } from "@/lib/archive-issues";
@@ -8,15 +9,16 @@ import { SHARE_IMAGE_SIZE } from "@/lib/archive-seo";
 import { getAppUrl } from "@/lib/config";
 import { formatDate, formatNumber } from "@/lib/format";
 
-const [geistRegular, geistSemiBold] = await Promise.all([
+const [geistRegular, geistSemiBold, editorialBoldItalic] = await Promise.all([
 	readFile(join(process.cwd(), "assets/fonts/Geist-Regular.ttf")),
 	readFile(join(process.cwd(), "assets/fonts/Geist-SemiBold.ttf")),
+	readFile(join(process.cwd(), "assets/fonts/Lora-BoldItalic.woff")),
 ]);
 const FONTS = [
 	{ name: "Geist", data: geistRegular, weight: 400, style: "normal" },
 	{ name: "Geist", data: geistSemiBold, weight: 600, style: "normal" },
+	{ name: "Editorial", data: editorialBoldItalic, weight: 700, style: "italic" },
 ];
-const COLORS = { foreground: "#0a0a0a", muted: "#737373", border: "#e5e5e5" };
 
 async function loadImage(url) {
 	const buffer = url.startsWith("/")
@@ -36,14 +38,6 @@ async function readLogo(imageUrl) {
 	return (await loadImage(imageUrl.replace(/\.webp$/i, ".png"))) ?? loadImage(imageUrl);
 }
 
-// Each issue gets its own soft tint, so archive cards stand out from the page and a row of them
-// doesn't look like one card repeated.
-function issueBackground(slug) {
-	let hue = 0;
-	for (const character of slug) hue = (hue * 31 + character.codePointAt(0)) % 360;
-	return `linear-gradient(135deg, hsl(${hue}, 85%, 96%), hsl(${(hue + 45) % 360}, 75%, 89%))`;
-}
-
 // Share card for the archive home, and for issues that have no thumbnail of their own.
 export async function GET(request, { params }) {
 	const { slug } = await params;
@@ -59,61 +53,19 @@ export async function GET(request, { params }) {
 	const footer = issue ? formatDate(getIssueDate(issue)) : readers >= 100 ? `Join ${formatNumber(readers)} readers` : "";
 
 	return new ImageResponse(
-		<div
-			style={{
-				width: "100%",
-				height: "100%",
-				display: "flex",
-				flexDirection: "column",
-				justifyContent: "space-between",
-				padding: 72,
-				backgroundColor: "#ffffff",
-				...(issue && { backgroundImage: issueBackground(issue.archiveSlug) }),
-				fontFamily: "Geist",
-				color: COLORS.foreground,
-			}}
-		>
-			<div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-				{logo && (
-					// eslint-disable-next-line @next/next/no-img-element -- ImageResponse renders plain <img>
-					<img
-						src={logo}
-						width={issue ? 64 : 112}
-						height={issue ? 64 : 112}
-						style={{ borderRadius: issue ? 16 : 28, border: `1px solid ${COLORS.border}` }}
-						alt=""
-					/>
-				)}
-				{issue && <span style={{ fontSize: 32, fontWeight: 600 }}>{newsletter.name}</span>}
-			</div>
-
-			<div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 1000 }}>
-				<span
-					style={{
-						fontSize: issue ? 64 : 88,
-						fontWeight: 600,
-						lineHeight: 1.08,
-						letterSpacing: issue ? -2 : -3,
-					}}
-				>
-					{issue ? issue.subject : newsletter.name}
-				</span>
-				{(issue ? issue.previewText : newsletter.description) && (
-					<span style={{ fontSize: 32, lineHeight: 1.35, color: COLORS.muted }}>
-						{issue ? issue.previewText : newsletter.description}
-					</span>
-				)}
-			</div>
-
-			<div style={{ display: "flex", justifyContent: "space-between", fontSize: 28, color: COLORS.muted }}>
-				<span>{footer}</span>
-				<span>{domain}</span>
-			</div>
-		</div>,
+		<ShareCard
+			name={newsletter.name}
+			title={issue ? issue.subject : newsletter.name}
+			description={issue ? issue.previewText : newsletter.description}
+			logo={logo}
+			domain={domain}
+			footer={footer}
+			issue={Boolean(issue)}
+		/>,
 		{
 			...SHARE_IMAGE_SIZE,
 			fonts: FONTS,
-			headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800" },
+			headers: { "Cache-Control": "private, no-store, max-age=0" },
 		}
 	);
 }
